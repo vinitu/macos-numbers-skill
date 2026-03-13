@@ -1,6 +1,6 @@
-# Apple Numbers AppleScript Skill
+# macOS Numbers AppleScript Skill
 
-This repo stores a Codex skill for Apple Numbers.app on macOS.
+This repo stores a Codex skill for macOS Numbers.app.
 
 It provides JSON-first AppleScript entrypoints for document and table automation.
 
@@ -9,13 +9,13 @@ It provides JSON-first AppleScript entrypoints for document and table automation
 Install with `skills.sh`:
 
 ```bash
-skills.sh add vinitu/apple-numbers-skill
+skills.sh add vinitu/macos-numbers-skill
 ```
 
 If you use the npm installer instead:
 
 ```bash
-npx skills add vinitu/apple-numbers-skill
+npx skills add vinitu/macos-numbers-skill
 ```
 
 ## Scope

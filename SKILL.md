@@ -1,9 +1,9 @@
 ---
-name: apple-numbers
+name: macos-numbers
 description: Use this skill when you need to read or edit Apple Numbers spreadsheets on macOS through AppleScript entrypoints that return JSON.
 ---
 
-# Apple Numbers AppleScript
+# macOS Numbers AppleScript
 
 Use this skill when the task is about Apple Numbers.app on macOS and the repo already contains an AppleScript entrypoint for the action.
 
