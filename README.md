@@ -6,16 +6,14 @@ It provides JSON-first AppleScript entrypoints for document and table automation
 
 ## Installation
 
-Install with `skills.sh`:
+```bash
+npx skills add vinitu/macos-numbers-skill
+```
+
+Or with [skills.sh](https://skills.sh):
 
 ```bash
 skills.sh add vinitu/macos-numbers-skill
-```
-
-If you use the npm installer instead:
-
-```bash
-npx skills add vinitu/macos-numbers-skill
 ```
 
 ## Scope
