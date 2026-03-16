@@ -43,8 +43,8 @@ end run
 
 on applyCreateSpec(docRef, specValue)
     tell application "Numbers"
-        set sheetRef to first sheet of docRef
-        set tableRef to first table of sheetRef
+        set sheetRef to first sheet of (contents of docRef)
+        set tableRef to first table of (contents of sheetRef)
     end tell
 
     set sheetSpecs to {}
