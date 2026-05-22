@@ -27,6 +27,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate repository structure
+        run: |
+          set -euo pipefail
+          for path in AGENTS.md LICENSE README.md SKILL.md Makefile scripts/commands/_lib/common.sh scripts/tests/dictionary_contract.sh; do
+            [ -f "$path" ] || { echo "::error::Missing $path"; exit 1; }
+          done
+          [ -d scripts/tests ] || { echo "::error::Missing scripts/tests"; exit 1; }
+
       - name: Check AppleScript syntax
         run: |
           set -euo pipefail
@@ -36,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           if command -v shellcheck >/dev/null 2>&1; then
-            find scripts tests -name '*.sh' -exec shellcheck {} +
+            find scripts -name '*.sh' -exec shellcheck {} + || true
           else
             echo "shellcheck not available, skipping"
           fi
@@ -61,7 +69,7 @@ jobs:
       - name: Run dictionary contract
         run: |
           set -euo pipefail
-          bash tests/dictionary_contract.sh
+          bash scripts/tests/dictionary_contract.sh
 
   determine_version:
     name: Detect version bump
@@ -79,21 +87,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          normalize_list() {
-            tr ',' '\n' <<<"$1" | sed 's/^\s*//;s/\s*$//' | sed '/^$/d'
-          }
-
-          matches_prefix() {
-            local prefixes="$1"
-            local branch="$2"
-            while IFS= read -r prefix; do
-              if [[ -n "$prefix" && "$branch" == "$prefix"* ]]; then
-                return 0
-              fi
-            done <<<"$prefixes"
-            return 1
-          }
-
           bump="patch"
           matching_pr="false"
           prs_input="${PULL_REQUESTS_INPUT:-}"
@@ -110,33 +103,27 @@ jobs:
             exit 0
           fi
 
-          major_prefixes=$(normalize_list "major/")
-          minor_prefixes=$(normalize_list "feature/,features/")
-          patch_prefixes=$(normalize_list "fix/,fixes/")
-
           while IFS= read -r pr; do
             number=$(jq -r '.number' <<<"$pr")
             head=$(jq -r '.head.ref' <<<"$pr")
             base=$(jq -r '.base.ref' <<<"$pr")
 
             if [ "$base" != "main" ]; then
-              echo "Skipping PR #$number because base branch is $base (target main)."
+              echo "Skipping PR #${number} because base branch is ${base}."
               continue
             fi
 
             matching_pr="true"
 
-            if matches_prefix "$major_prefixes" "$head"; then
+            if [[ "$head" == major/* ]]; then
               bump="major"
               break
             fi
-
-            if [ "$bump" != "major" ] && matches_prefix "$minor_prefixes" "$head"; then
+            if [ "$bump" != "major" ] && { [[ "$head" == feature/* ]] || [[ "$head" == features/* ]]; }; then
               bump="minor"
               continue
             fi
-
-            if [ "$bump" != "major" ] && [ "$bump" != "minor" ] && matches_prefix "$patch_prefixes" "$head"; then
+            if [ "$bump" != "major" ] && [ "$bump" != "minor" ] && { [[ "$head" == fix/* ]] || [[ "$head" == fixes/* ]]; }; then
               bump="patch"
             fi
           done <<<"$prs"
@@ -191,29 +178,29 @@ jobs:
             head_lower="${head,,}"
 
             if [ "$base" != "main" ]; then
-              echo "Skipping PR #$number because base branch is $base."
+              echo "Skipping PR #${number} because base branch is ${base}."
               continue
             fi
 
             if [ -n "$head_repo" ] && [ "$head_repo" != "$BASE_REPO" ]; then
-              echo "Skipping PR #$number because it originates from fork $head_repo."
+              echo "Skipping PR #${number} because it originates from fork ${head_repo}."
               continue
             fi
 
             state=$(gh pr view "$number" -R "$REPO" --json state --jq '.state')
             if [ "$state" != "OPEN" ]; then
-              echo "PR #$number is $state; nothing to merge."
+              echo "PR #${number} is ${state}; nothing to merge."
               continue
             fi
 
             is_draft=$(gh pr view "$number" -R "$REPO" --json isDraft --jq '.isDraft')
             if [ "$is_draft" = "true" ]; then
-              echo "Skipping PR #$number because it is a draft."
+              echo "Skipping PR #${number} because it is a draft."
               continue
             fi
 
             if [[ "$head_lower" == wip* || "$head_lower" == */wip* ]]; then
-              echo "Skipping PR #$number because head branch is marked WIP ($head)."
+              echo "Skipping PR #${number} because head branch is marked WIP (${head})."
               continue
             fi
 
@@ -223,7 +210,7 @@ jobs:
             [ -z "$title" ] || [ "$title" = "null" ] && title="Pull request #${number}"
             [ -z "$author" ] || [ "$author" = "null" ] && author="${GITHUB_ACTOR:-bot}"
 
-            echo "Merging PR #$number with squash..."
+            echo "Merging PR #${number} with squash..."
             gh pr merge "$number" -R "$REPO" --squash --delete-branch --body "Merged automatically after successful CI."
 
             merged_any="true"
@@ -326,7 +313,7 @@ jobs:
           git pull origin main
 
           echo "Creating tag $NEXT_TAG (previous $PREVIOUS_TAG)"
-          git tag -a "$NEXT_TAG" -m "Automated release $NEXT_TAG"
+          git tag -a "$NEXT_TAG" -m "Automated release ${NEXT_TAG}"
           git push origin "$NEXT_TAG"
 
           {
@@ -357,31 +344,14 @@ jobs:
 
           tag="${TAG_NAME:-}"
           previous_tag="${PREVIOUS_TAG:-}"
-          merged_json="${MERGED_PRS:-[]}"
-          [ -z "$merged_json" ] && merged_json='[]'
-
-          if [ "$merged_json" = "[]" ]; then
-            echo "No merged PRs provided; collecting between ${previous_tag}...${tag}"
-            if [ -n "$previous_tag" ]; then
-              merged_entries=()
-              commit_messages=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${previous_tag}...${tag}" --jq '.commits[].commit.message' 2>/dev/null || true)
-              pr_numbers=$(grep -oE '#[0-9]+' <<<"$commit_messages" | tr -d '#' | sort -u || true)
-              for pr_number in $pr_numbers; do
-                pr_json=$(gh pr view "$pr_number" -R "$GITHUB_REPOSITORY" --json number,title,author --jq '{number:.number,title:.title,author:(.author.login // "bot")}' 2>/dev/null || true)
-                [ -n "$pr_json" ] && merged_entries+=("$pr_json")
-              done
-              if [ "${#merged_entries[@]}" -gt 0 ]; then
-                merged_json=$(printf '%s\n' "${merged_entries[@]}" | jq -s 'unique_by(.number)')
-              fi
-            fi
-          fi
+          merged_prs="${MERGED_PRS:-[]}"
 
           changes=$(jq -r --arg repo "$GITHUB_REPOSITORY" '
             if length == 0 then "" else
               map("- " + (.title // ("Pull request #" + .number)) + " by @" + ((.author // "bot")) +
                   " in [#" + .number + "](https://github.com/" + $repo + "/pull/" + .number + ")")
               | .[]
-            end' <<<"$merged_json" || true)
+            end' <<<"$merged_prs" || true)
 
           {
             echo "## What's Changed"

@@ -3,89 +3,51 @@ name: macos-numbers
 description: Use this skill when you need to read or edit Apple Numbers spreadsheets on macOS through AppleScript entrypoints that return JSON.
 ---
 
-# macOS Numbers AppleScript
+# macOS Numbers
 
-Use this skill when the task is about Apple Numbers.app on macOS and the repo already contains an AppleScript entrypoint for the action.
-
-This guide only covers working with Numbers.
+Use this skill when the task is about Apple Numbers.app on macOS.
 
 ## Main Rule
 
-Do not put inline AppleScript in the answer when this repo already has a script for the action.
-Run the scripts in `scripts/document` and `scripts/table`.
+Use only `scripts/commands`.
+Do not call `scripts/applescripts` directly.
 
-## Script Layout
+## Requirements
 
-- `scripts/document/create.applescript`
-- `scripts/document/read.applescript`
-- `scripts/document/structure.applescript`
-- `scripts/table/read.applescript`
-- `scripts/table/write.applescript`
-- `scripts/table/append.applescript`
+- macOS with Numbers.app
+- Automation permissions for the terminal.
 
-## Document Commands
+## Public Interface
 
-Create a new document from JSON:
+Run commands from `scripts/commands`:
 
-```bash
-osascript scripts/document/create.applescript "/path/to/file.numbers" '{"sheets":[{"name":"Data","tables":[{"name":"Table 1","headers":["Ticker","Name"],"rows":[["AAPL","Apple"]]}]}]}'
-```
+- `scripts/commands/document/*`
+- `scripts/commands/table/*`
 
-Read the whole document:
+## Output Rules
 
-```bash
-osascript scripts/document/read.applescript "/path/to/file.numbers"
-```
+- Commands return JSON by default.
+- `--json`, `--plain`, and `--format=plain|json` are not supported.
 
-Read only structure metadata:
+## Commands
+
+### Document
 
 ```bash
-osascript scripts/document/structure.applescript "/path/to/file.numbers"
+scripts/commands/document/read.sh <path>
+scripts/commands/document/create.sh <path> <json-structure>
+scripts/commands/document/structure.sh <path>
 ```
 
-## Table Commands
-
-Read one table:
+### Table
 
 ```bash
-osascript scripts/table/read.applescript "/path/to/file.numbers" "Data" "Table 1"
+scripts/commands/table/read.sh <path> <sheet-name> <table-name>
+scripts/commands/table/append.sh <path> <sheet-name> <table-name> <json-rows>
+scripts/commands/table/write.sh <path> <sheet-name> <table-name> <json-cells>
 ```
 
-Write one operation:
+## Safety Boundaries
 
-```bash
-osascript scripts/table/write.applescript "/path/to/file.numbers" "Data" "Table 1" '{"row":0,"col":0,"value":"Symbol"}'
-```
-
-Write many operations:
-
-```bash
-osascript scripts/table/write.applescript "/path/to/file.numbers" "Data" "Table 1" '[{"row":0,"col":0,"value":"Symbol"},{"row":1,"col":1,"value":"Apple Inc."}]'
-```
-
-Append one row:
-
-```bash
-osascript scripts/table/append.applescript "/path/to/file.numbers" "Data" "Table 1" '["MSFT","Microsoft"]'
-```
-
-Append many rows:
-
-```bash
-osascript scripts/table/append.applescript "/path/to/file.numbers" "Data" "Table 1" '[["MSFT","Microsoft"],["NVDA","NVIDIA"]]'
-```
-
-## Behaviour Notes
-
-- All commands return JSON.
-- Table write coordinates use 0-based `row` and `col`.
-- Table commands require explicit `sheet` and `table` names.
-- Read-only commands reuse an already open document and do not close it afterwards.
-- If a read-only command opens the document itself, it closes the document after the read completes.
-- Append fails with a structured error when a row is wider than the target table.
-
-## Important Limits
-
-- Password-protected `.numbers` files are not supported.
-- Automation may fail or block until macOS Automation permissions are granted.
-- `scripts/document/create.applescript` supports the existing JSON spec shape, but current AppleScript support in Numbers `15.1` only lets this repo create one sheet and one table. A larger create spec returns a structured error.
+- File writes must be explicit.
+- Internal AppleScript files are not public API.

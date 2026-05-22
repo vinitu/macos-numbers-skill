@@ -1,8 +1,9 @@
-# macOS Numbers AppleScript Skill
+# macOS Numbers Skill
 
-This repo stores a Codex skill for macOS Numbers.app.
+This repo stores an AI agent skill for Apple Numbers.app on macOS.
 
-It provides JSON-first AppleScript entrypoints for document and table automation.
+The public interface is `scripts/commands`.
+`scripts/applescripts` stores internal AppleScript backends and dictionary-aligned coverage.
 
 ## Installation
 
@@ -16,87 +17,55 @@ Or with [skills.sh](https://skills.sh):
 skills.sh add vinitu/macos-numbers-skill
 ```
 
-## Scope
+## Prerequisites
 
-- Create a new `.numbers` document from a JSON spec.
-- Read document structure and table data as JSON.
-- Update cells with explicit `row` and `col` coordinates.
-- Append one row or many rows to an existing table.
-- Reuse an already open document without closing the user's window.
+- macOS with Numbers.app
+- Automation permission granted to your terminal app
 
-## Tested Base
+## Public Interface
 
-- macOS `26.3.1`
-- Numbers `15.1`
+Run skill actions with:
 
-## Repo Layout
+```bash
+scripts/commands/<entity>/<action>.sh [args...]
+```
 
-- `AGENTS.md` - repo rules for future agents.
-- `SKILL.md` - the full skill workflow and examples.
-- `Makefile` - helper commands for dictionary dump, compile, and tests.
-- `scripts/document/` - file-level AppleScript entrypoints.
-- `scripts/table/` - table-level AppleScript entrypoints.
-- `tests/` - dictionary and live smoke checks for Numbers.app.
+Output rules:
+
+- Commands return JSON by default unless noted otherwise.
+- `--json`, `--plain`, and `--format=plain|json` are not supported.
+
+## Backend Map
+
+- `scripts/commands/document/*` → AppleScript in `scripts/applescripts/document/*`
+- `scripts/commands/table/*` → AppleScript in `scripts/applescripts/table/*`
+
+`scripts/applescripts` is internal. Do not call it directly from the skill instructions.
 
 ## Command Surface
 
-Document commands:
+Document:
 
-- `scripts/document/create.applescript`
-- `scripts/document/read.applescript`
-- `scripts/document/structure.applescript`
+- `scripts/commands/document/read.sh`
+- `scripts/commands/document/create.sh`
+- `scripts/commands/document/structure.sh`
 
-Table commands:
+Table:
 
-- `scripts/table/read.applescript`
-- `scripts/table/write.applescript`
-- `scripts/table/append.applescript`
+- `scripts/commands/table/read.sh`
+- `scripts/commands/table/append.sh`
+- `scripts/commands/table/write.sh`
 
-## How To Use
-
-Create a new spreadsheet:
+## Validation
 
 ```bash
-osascript scripts/document/create.applescript "/path/to/file.numbers" '{"sheets":[{"name":"Data","tables":[{"name":"Table 1","headers":["Ticker","Name"],"rows":[["AAPL","Apple"]]}]}]}'
+make compile
+make test
 ```
 
-Read a document:
+`make test` runs live checks against Numbers.app and expects Numbers to be available.
 
-```bash
-osascript scripts/document/read.applescript "/path/to/file.numbers"
-```
+## Known Limits
 
-Read document structure:
-
-```bash
-osascript scripts/document/structure.applescript "/path/to/file.numbers"
-```
-
-Read one table:
-
-```bash
-osascript scripts/table/read.applescript "/path/to/file.numbers" "Data" "Table 1"
-```
-
-Write cells:
-
-```bash
-osascript scripts/table/write.applescript "/path/to/file.numbers" "Data" "Table 1" '[{"row":0,"col":0,"value":"Symbol"},{"row":1,"col":1,"value":"Apple Inc."}]'
-```
-
-Append rows:
-
-```bash
-osascript scripts/table/append.applescript "/path/to/file.numbers" "Data" "Table 1" '[["MSFT","Microsoft"],["NVDA","NVIDIA"]]'
-```
-
-For the full command set and examples, use `SKILL.md`.
-
-## Important Limits
-
-- Numbers is a GUI app. Automation may depend on macOS Automation permissions and app state.
-- Password-protected `.numbers` files are not supported.
-- `scripts/document/create.applescript` keeps the JSON spec shape from the earlier JXA version, but current AppleScript support in Numbers `15.1` can only create one sheet and one table in that sheet. Larger specs return a structured error.
-- `row` and `col` in table write commands are 0-based.
-- Table-level commands require explicit `sheet` and `table` names.
-- Read-only commands close the document only when they opened it themselves.
+- Numbers must be running for some commands to work.
+- TCC permissions (Automation) must be granted to the terminal or parent process.
