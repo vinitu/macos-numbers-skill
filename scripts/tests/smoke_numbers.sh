@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 tmp_dir="$(mktemp -d)"
 tmp_file="$tmp_dir/CodexTest_$(date +%s).numbers"
 
@@ -61,42 +61,41 @@ APPLESCRIPT
 
 osascript -e 'tell application "Numbers" to version' >/dev/null
 
-create_out="$(osascript "$repo_root/scripts/document/create.applescript" "$tmp_file" '{"sheets":[{"name":"Data","tables":[{"name":"Table 1","headers":["Ticker","Name"],"rows":[["AAPL","Apple"]]}]}]}')"
+create_out="$(bash "$repo_root/scripts/commands/document/create.sh" "$tmp_file" '{"sheets":[{"name":"Data","tables":[{"name":"Table 1","headers":["Ticker","Name"],"rows":[["AAPL","Apple"]]}]}]}')"
 assert_contains "$create_out" '"success":true' "create failed: $create_out"
 
-structure_out="$(osascript "$repo_root/scripts/document/structure.applescript" "$tmp_file")"
+structure_out="$(bash "$repo_root/scripts/commands/document/structure.sh" "$tmp_file")"
 assert_contains "$structure_out" '"name":"Data"' "structure did not include sheet name"
 assert_contains "$structure_out" '"name":"Table 1"' "structure did not include table name"
 assert_contains "$structure_out" '"rowCount":2' "structure did not include row count"
 
-document_read_out="$(osascript "$repo_root/scripts/document/read.applescript" "$tmp_file")"
+document_read_out="$(bash "$repo_root/scripts/commands/document/read.sh" "$tmp_file")"
 assert_contains "$document_read_out" '"Ticker"' "document read did not include header value"
 assert_contains "$document_read_out" '"AAPL"' "document read did not include data row"
 
-table_read_out="$(osascript "$repo_root/scripts/table/read.applescript" "$tmp_file" "Data" "Table 1")"
+table_read_out="$(bash "$repo_root/scripts/commands/table/read.sh" "$tmp_file" "Data" "Table 1")"
 assert_contains "$table_read_out" '"Name"' "table read did not include table header"
 assert_contains "$table_read_out" '"Apple"' "table read did not include cell data"
 
-write_out="$(osascript "$repo_root/scripts/table/write.applescript" "$tmp_file" "Data" "Table 1" '[{"row":0,"col":0,"value":"Symbol"},{"row":1,"col":1,"value":"Apple Inc."}]')"
+write_out="$(bash "$repo_root/scripts/commands/table/write.sh" "$tmp_file" "Data" "Table 1" '[{"row":0,"col":0,"value":"Symbol"},{"row":1,"col":1,"value":"Apple Inc."}]')"
 assert_contains "$write_out" '"cellsUpdated":2' "write did not report two updated cells"
 
-append_out="$(osascript "$repo_root/scripts/table/append.applescript" "$tmp_file" "Data" "Table 1" '[["MSFT","Microsoft"],["NVDA","NVIDIA"]]')"
+append_out="$(bash "$repo_root/scripts/commands/table/append.sh" "$tmp_file" "Data" "Table 1" '[["MSFT","Microsoft"],["NVDA","NVIDIA"]]')"
 assert_contains "$append_out" '"rowsAppended":2' "append did not report appended rows"
 assert_contains "$append_out" '"cellsUpdated":4' "append did not report updated cells"
 
-final_read_out="$(osascript "$repo_root/scripts/document/read.applescript" "$tmp_file")"
+final_read_out="$(bash "$repo_root/scripts/commands/document/read.sh" "$tmp_file")"
 assert_contains "$final_read_out" '"Symbol"' "final read did not include overwritten header"
 assert_contains "$final_read_out" '"Apple Inc."' "final read did not include overwritten value"
 assert_contains "$final_read_out" '"MSFT"' "final read did not include appended row"
 assert_contains "$final_read_out" '"NVIDIA"' "final read did not include appended row tail"
 
-too_wide_out="$(osascript "$repo_root/scripts/table/append.applescript" "$tmp_file" "Data" "Table 1" '[["A","B","C"]]' )"
+too_wide_out="$(bash "$repo_root/scripts/commands/table/append.sh" "$tmp_file" "Data" "Table 1" '[["A","B","C"]]' )"
 assert_contains "$too_wide_out" '"error"' "wide row append should fail"
 
 osascript <<APPLESCRIPT >/dev/null
-set targetPath to "$tmp_file"
 tell application "Numbers"
-    open POSIX file targetPath
+    open POSIX file "$tmp_file"
     delay 0.5
 end tell
 APPLESCRIPT
@@ -107,7 +106,7 @@ if [[ "$open_before" != "true" ]]; then
   exit 1
 fi
 
-reuse_read_out="$(osascript "$repo_root/scripts/document/read.applescript" "$tmp_file")"
+reuse_read_out="$(bash "$repo_root/scripts/commands/document/read.sh" "$tmp_file")"
 assert_contains "$reuse_read_out" '"Symbol"' "reuse read did not return target data"
 
 open_after="$(is_target_open)"
