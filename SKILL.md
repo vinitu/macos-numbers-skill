@@ -47,6 +47,31 @@ scripts/commands/table/append.sh <path> <sheet-name> <table-name> <json-rows>
 scripts/commands/table/write.sh <path> <sheet-name> <table-name> <json-cells>
 ```
 
+## JSON Contract
+
+Document object:
+
+- `name` (string)
+- `path` (string)
+- `sheets_count` (integer)
+
+Table object:
+
+- `name` (string)
+- `rows` (integer)
+- `columns` (integer)
+- `headers` (list of strings)
+
+Cell object:
+
+- `row` (integer, 0-based)
+- `column` (integer, 0-based)
+- `value` (string or number)
+
+Scalar envelopes:
+
+- `success/failure`: `{"success": true/false, "error": "..."}`
+
 ## Safety Boundaries
 
 - File writes must be explicit.
