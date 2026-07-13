@@ -2,6 +2,12 @@
 
 This repo stores a Codex skill for macOS Numbers.app.
 
+## Public interface and internal backend
+
+- `scripts/commands/` is the only public command surface. Run commands from the repo root with paths like `scripts/commands/<entity>/<action>.sh`.
+- `scripts/applescripts/` is the internal backend. Do not call AppleScript files directly from skill instructions.
+- Only commands listed in `SKILL.md` are public. Other scripts may exist for internal use or legacy cleanup.
+
 ## Goal
 
 - Keep the AppleScript command surface accurate to the live Numbers dictionary.
@@ -21,8 +27,8 @@ The supported command surface lives in `SKILL.md`, this file, and the scripts in
 - `SKILL.md` is the main skill workflow.
 - `README.md` is the repo overview for humans.
 - `Makefile` stores dictionary, compile, and test commands.
-- `scripts/document/` stores file-level AppleScript entrypoints.
-- `scripts/table/` stores table-level AppleScript entrypoints.
+- `scripts/applescripts/document/` stores file-level AppleScript entrypoints.
+- `scripts/applescripts/table/` stores table-level AppleScript entrypoints.
 - `tests/` stores dictionary and live smoke checks for Numbers.app.
 
 ## Editing Rules
