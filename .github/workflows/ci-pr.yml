@@ -30,10 +30,10 @@ jobs:
       - name: Validate repository structure
         run: |
           set -euo pipefail
-          for path in AGENTS.md LICENSE README.md SKILL.md Makefile scripts/commands/_lib/common.sh scripts/tests/dictionary_contract.sh; do
+          for path in AGENTS.md LICENSE README.md SKILL.md Makefile scripts/commands/_lib/common.sh tests/dictionary_contract.sh; do
             [ -f "$path" ] || { echo "::error::Missing $path"; exit 1; }
           done
-          [ -d scripts/tests ] || { echo "::error::Missing scripts/tests"; exit 1; }
+          [ -d tests ] || { echo "::error::Missing tests"; exit 1; }
 
       - name: Check AppleScript syntax
         run: |
@@ -69,7 +69,7 @@ jobs:
       - name: Run dictionary contract
         run: |
           set -euo pipefail
-          bash scripts/tests/dictionary_contract.sh
+          bash tests/dictionary_contract.sh
 
   determine_version:
     name: Detect version bump
